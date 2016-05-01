@@ -1,0 +1,7 @@
+Type: IPython Notebook Extension
+Name: Notebook web notifications
+Description: IPython notebook extension to display a web notification to notify you when the IPython kernel becomes idle.
+Link: https://github.com/sjpfenninger/ipython-extensions
+Icon: icon.png
+Main: main.js
+Compatibility: 3.x
