@@ -16,4 +16,5 @@ ADD .ipython /home/main/.ipython
 RUN pip install -r requirements.txt
 
 # Install requirements for Python 3
-RUN /home/main/anaconda/envs/python3/bin/pip install -r requirements.txt
+RUN ls -R /home/main/
+#anaconda/envs/python3/bin/pip install -r requirements.txt
