@@ -7,8 +7,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from .jdftx_constants import *
-import .jdftx_InputParser as jdparser
-import .jdftx_unitcell as jdcell
+import jdftx_InputParser as jdparser
+import jdftx_unitcell as jdcell
 
 noMayavi = False
 try:
