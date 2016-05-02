@@ -23,7 +23,6 @@ RUN pip install -r requirements.txt
 RUN /home/main/anaconda2/envs/python3/bin/pip install -r requirements.txt
 
 #install chemview
-RUN /home/main/anaconda2/envs/python3/bin/pip install -r requirements.txt
 #RUN git clone https://github.com/gabrielelanaro/chemview
 #WORKDIR chemview
 # RUN /home/main/anaconda2/envs/python3/bin/pip install .
