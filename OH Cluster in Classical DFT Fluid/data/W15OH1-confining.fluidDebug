@@ -1,0 +1,11 @@
+
+Components of Adiel:
+                  +pV =        0.0001476600785010
+              Coulomb =        0.1117813213998749
+           ExtCoulomb =       -0.2562873630768578
+             Fex(H2O) =       -1.7085747742002846
+   Fmix(ConvCoupling) =        0.0606026871877532
+    Fmix(VDWCoupling) =       -0.0386110071890618
+             MixedFMT =        0.4330971996729522
+           PhiNI(H2O) =        1.3567867077127163
+              PsqCell =        0.0000029384155861

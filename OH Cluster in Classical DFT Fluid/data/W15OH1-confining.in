@@ -1,0 +1,61 @@
+elec-initial-charge 1  #charge the system
+
+#Created by jdftx_lattice.py
+
+#Verlet:
+#ionic-dynamics 1.0 5000 0.001 0
+#confine-dynamics smoothlinear 2e-8 0.3 8.0
+core-overlap-check none
+
+symmetries none
+
+fluid ClassicalDFT
+fluid-gummel-loop 20 1e-7
+fluid-minimize \
+    nIterations 100 \
+    energyDiffThreshold 1e-8
+    
+fluid-solvent H2O 55.338 ScalarEOS \
+    epsBulk 78.4 \
+    pMol 0.92466 \
+    epsInf 1 \
+    Pvap 1.06736e-10 \
+    sigmaBulk 4.62e-05 \
+    Rvdw 2.61727 \
+    Res 1.42 \
+    representation MuEps \
+    s2quadType 7design24 \
+    Nnorm 0
+#    translationMode LinearSpline \
+#    quad_nBeta 0 \
+#    quad_nAlpha 0 \
+#    quad_nGamma 0 \
+#   epsLJ 0 \
+
+fluid-vdwScale  0.488    
+
+#Electronic minimization:
+electronic-minimize \
+    nIterations 200 \
+    energyDiffThreshold 1e-8 
+    
+dump End BandEigs IonicPositions Lattice Ecomponents FluidDensity FluidDebug State ElecDensity
+    
+dump-name W15OH1-confining.$VAR
+debug Fluid
+
+#Ion-Species
+ion-species /home/yalcin/JDFT/.pseudopotentials/GBRV/h.uspp
+ion-species /home/yalcin/JDFT/.pseudopotentials/GBRV/o.uspp
+
+
+
+#Ion Positions
+coords-type cartesian
+
+lattice	35	0.000000	0.000000\
+	0.000000	35	0.000000\
+	0.000000	0.000000	35
+
+include ../t=0/t0
+initial-state ../t=0/W15OH1-confining.$VAR
