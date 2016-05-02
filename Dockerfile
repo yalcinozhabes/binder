@@ -21,3 +21,5 @@ RUN pip install -r requirements.txt
 
 # Install requirements for Python 3
 RUN /home/main/anaconda2/envs/python3/bin/pip install -r requirements.txt
+
+ADD chemview /home/main/anaconda2/envs/python3/lib/python3.5/site-packages/chemview/
