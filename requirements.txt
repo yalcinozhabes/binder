@@ -3,5 +3,5 @@ numpy
 scipy
 seaborn
 prettyplotlib
-chemview=0.3
+setuptools
 numba
