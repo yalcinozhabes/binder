@@ -7,12 +7,12 @@ USER root
 # Add dependency
 RUN apt-get update
 RUN apt-get install -y graphviz
-
-USER main
-
 ADD jdftx /home/main/jdftx
 ADD .ipython /home/main/.ipython
 RUN chmod -R u+w /home/main/.ipython
+
+
+USER main
 ENV PYTHONPATH /home/main/jdftx:$PYTHONPATH
 
 # Install requirements for Python 2
