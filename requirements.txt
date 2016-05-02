@@ -5,3 +5,4 @@ seaborn
 prettyplotlib
 setuptools
 numba
+chemview
