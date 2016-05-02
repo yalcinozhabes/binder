@@ -4,4 +4,4 @@ scipy
 seaborn
 prettyplotlib
 chemview
-
+numba
