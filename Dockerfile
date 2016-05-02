@@ -1,6 +1,6 @@
 FROM andrewosh/binder-base
 
-MAINTAINER Jeremy Freeman <freeman.jeremy@gmail.com>
+MAINTAINER Yalcin Ozhabes <yalcinozhabes@gmail.com>
 
 USER root
 
@@ -10,9 +10,13 @@ RUN apt-get install -y graphviz
 
 USER main
 
+ADD jdftx /home/main/jdftx
+ADD .ipython /home/main/.ipython
+
+ENV PYTHONPATH /home/main/jdftx:$PYTHONPATH
+
 # Install requirements for Python 2
 ADD requirements.txt requirements.txt
-ADD .ipython /home/main/.ipython
 RUN pip install -r requirements.txt
 
 # Install requirements for Python 3
