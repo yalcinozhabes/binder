@@ -11,10 +11,10 @@ from jdftx_constants import *
 try:
     defaulttext = subprocess.check_output(['jdftx', '-t'], universal_newlines=True)
     defaulttext = '\n'.join([line for line in defaulttext.splitlines() if line!='' and line[0]!='#'])
-except subprocess.CalledProcessError:
+except:
     try:
         defaulttext = subprocess.check_output(['cat', '/home/main/jdftx/help.txt'], universal_newlines=True)
-    except subprocess.CalledProcessError:
+    except:
         defaulttext = ''
 
 def removeComments(text):
