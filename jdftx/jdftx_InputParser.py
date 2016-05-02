@@ -13,7 +13,7 @@ try:
     defaulttext = '\n'.join([line for line in defaulttext.splitlines() if line!='' and line[0]!='#'])
 except subprocess.CalledProcessError:
     try:
-        defaulttext = subprocess.check_output(['cat', '/home/zatarra/Dropbox/python_path/help.txt'], universal_newlines=True)
+        defaulttext = subprocess.check_output(['cat', '/home/main/jdftx/help.txt'], universal_newlines=True)
     except subprocess.CalledProcessError:
         defaulttext = ''
 

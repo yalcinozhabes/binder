@@ -1,0 +1,909 @@
+# add-U <species> <orbDesc> <UminusJ> [Vext <atom> <V>] ... [ <species2> ... ]
+# Add U correction (DFT+U) to specified species and orbitals, in the simplified
+# rotationally-invariant scheme of [Dudarev et al, Phys. Rev. B 57, 1505], where
+# the correction depends only on U - J.
+#   <species> is one of the pseudopotential identifiers.
+#   <orbDesc> is one of s,p,d or f.
+#   <UminusJ> = U-J is the on-site correction energy in hartrees.
+#   Vext <atom> <V>: optionally specify an external potential on the atomic projection
+#          which may be used to calculate U from linear response. <atom> is the atom
+#          number of this species (1-based) to perturb by strength <V> (in Eh). Multiple
+#          Vext's may appear per U channel to perturb multiple atoms simultaneously.
+# Repeat the sequence for corrections to multiple species.
+# If pseudoatom has multiple shells of same angular momentum, prefix <orbDesc>
+# with a number e.g. 1p or 2p to select the first or second p shell respectively.
+
+# basis <kdep>=kpoint-dependent|single
+# Basis set at each k-point (default), or single basis set at gamma point
+basis kpoint-dependent
+
+# box-potential xmin xmax ymin ymax zmin zmax Vin Vout [<convolve_radius>=0.1]
+# Include an step-function shaped external potential (in hartrees) for the electrons
+
+# cache-projectors yes|no
+# Cache nonlocal-pseudopotential projectors (yes by default); turn off to save memory.
+
+# chargeball <species-id> <unusedInteger> <width> [<norm>=2.0]
+# Gaussian chargeball of norm <norm> and width <width> for species <id>
+# (<unusedInteger> used to be the unused <Z_core>, and has been retained for compatibility)
+# This feature is deprecated, use a pseudopotential with partial core correction instead.
+
+# coords-type <coords>=cartesian|lattice
+# Coordinate system used in specifying ion positions (default: lattice)
+coords-type lattice
+
+# core-overlap-check <condition> = vectorial
+# Checks for core overlaps between ionic pseudopotentials.
+# 	additive -> checks for interatomic distance < (R1 + R2)
+# 	vector   -> checks for interatomic distance < sqrt(R1^2 + R2^2)   (default)
+# 	none
+# 
+core-overlap-check vector
+
+# coulomb-interaction <truncationType> [<args> ...]
+# Optionally truncate the coulomb interaction. The available truncation modes
+# and the corresponding arguments are:
+#    Periodic
+#       Standard periodic (untruncated) coulomb interaction (Default)
+#    Slab <dir>=001|010|100
+#       Truncate coulomb interaction along the specified lattice direction.
+#       The other two lattice directions must be orthogonal to this one.
+#       Useful for slab-like geometries.
+#    Cylindrical <dir>=001|010|100 [<Rc>=0]
+#       Truncate coulomb interaction on a cylinder of radius <Rc> bohrs
+#       with axis along specified lattice direction. The other two lattice
+#       directions must be orthogonal to this one. Rc=0 is understood to be
+#       the in-radius of the 2D Wigner-Seitz cell perpendicular to <dir>.
+#    Wire <dir>=001|010|100
+#       Truncate coulomb interaction on the 2D Wigner-Seitz cell in the plane
+#       perpendicular to <dir>. The other two lattice directions must be
+#       orthogonal to this one. Useful for wire-like geometries.
+#    Isolated
+#       Truncate coulomb interaction on the 3D Wigner-Seitz cell.
+#    Spherical [<Rc>=0]
+#       Truncate coulomb interaction on a sphere of radius <Rc> bohrs.
+#       Rc=0 is understood to be the in-radius of the Wigner-Seitz cell.
+# For all the truncated modes, the charge density must be confined to a
+# maximum separation of L/2 in each truncated direction, where L is the
+# length of the unit cell in that direction or 2 Rc for Spherical and
+# Cylindrical modes. The center of the charge density is not important
+# and may cross unit cell boundaries.
+coulomb-interaction Periodic
+
+# coulomb-truncation-embed <c0> <c1> <c2>
+# Compute truncated Coulomb interaction in a double-sized box (doubled only
+# along truncated directions). This relaxes the L/2 localization constraint
+# otherwise required by truncated potentials (see command coulomb-interaction),
+# but breaks translational invariance and requires the specification of a center.
+# Coordinate system for center (<c0> <c1> <c2>) is as specified by coords-type.
+# (Default: not enabled i.e. employs translationally invariant scheme)
+
+# coulomb-truncation-ion-margin <margin>
+# Extra margin (in bohrs) around the ions, when checking localization constraints
+# for truncated Coulomb potentials (see coulomb-interaction). Set to a typical
+# distance from nuclei where the electron density becomes negligible, so as to
+# ensure the electron density satisfies those localization constraints.
+# (Default: 5 bohrs, minimum allowed: 1 bohr)
+
+# custom-filling <qnum> <band> <filling>
+# Specify a custom filling for the input (quantum-number, band)
+# Bands are indexed from HOMO, i.e. band=0 is HOMO, band=1 is the LUMO
+# Fillings are in normalized units, as output by the dumpName.fillings file
+
+# debug <option> <option> ...
+# Each <option> is one of 
+#    Ecomponents  Print energy components and after each electronic iteration
+#    EigsFillings Print eigenvalues, Hsub and fillings after each iteration
+#    Fluid        Enable verbose logging of fluid (iterations for Linear, even more for others)
+#    Forces       Print each contribution to the force separately (NL, loc etc.)
+#    KpointsBasis List details of each k-point and corresponding basis
+#    MuSearch     Print progress of the mu bisect/fit routines
+#    Symmetries   Print various symmetry matrices during start up
+# Default: none of the optional outputs
+
+# density-of-states [<key1> ...] [<key2> ...] [<key3> ...] ... 
+# Compute density of states. The results are printed to a text file
+# with name corresponding to variable name 'dos' (see dump-name).
+# (Spin polarized calculations output variables 'dosUp' and 'dosDn'.)
+# Density of states with different weight functions may be computed
+# simultaneously, and they are all output as columns in the same file
+# in the same order that they appear in this command, with the energy
+# in the first column. The energy is in Hartrees, and the density of
+# states is in electrons/UnitCell/Hartree.
+#    This command is organized into subcommands, each with a keyword
+# followed by subcommand-specific arguments. The keywords that lead to a
+# column in the output file (various weighting modes) and arguments are:
+#    Total
+#       Compute the total density of states (no arguments)
+#    Slice  <c0> <c1> <c2>   <r>   <i0> <i1> <i2>
+#       Density of states in a planar slab centered at (<c0>,<c1>,<c2>)
+#       in the coordinate system selected by coords-type, parallel to
+#       the lattice plane specified by Miller indices (<i0>,<i1>,<i2>),
+#       with half-width <r> bohrs normal to the lattice plane.
+#    Sphere  <c0> <c1> <c2>   <r>
+#       Density of states in a sphere of radius <r> bohrs centered at
+#       (<c0>,<c1>,<c2>) in the coordinate system selected by coords-type.
+#    AtomSlice  <species> <atomIndex>   <r>   <i0> <i1> <i2>
+#       Like Slice mode, with center located at atom number <atomIndex>
+#       (1-based index, in input file order) of species name <species>.
+#    AtomSphere  <species> <atomIndex>   <r>
+#       Like Sphere mode, but centered on an atom (specified as in AtomSlice)
+#    File <filename>
+#       Arbitrary real-space weight function read from file <filename>.
+#       (double-precision binary, same format as electron density output)
+#       A file with all 1.0's would yield the same result as mode Total.
+#    Orbital  <species> <atomIndex>   <orbDesc>
+#       Atomic-orbital projected density of states. The target atom is
+#       selected as in AtomSphere mode. <orbDesc> selects the atomic orbital
+#       used for projection, from those available in the pseudopotential.
+#       s, p, d or f select the total projection in that angular momentum,
+#       and px, py, pz, dxy, dyz, dz2, dxz, dx2-y2, d, fy(3x2-y2) fxyz, fyz2,
+#       fz3, fxz2, fz(x2-y2) or fx(x2-3y2) select a specific orbital, where
+#       (x,y,z) are cartesian directions. The orbital code may be prefixed
+#       by the psuedo-atom principal quantum number in the case of multiple
+#       orbitals per angular momentum eg. '2px' selects the second px orbital
+#       in a psuedopotential with 2 l=1 orbitals, while '1px' or 'px' select
+#       the first of the two.
+#    OrthoOrbital  <species> <atomIndex>   <orbDesc>
+#       Similar to Orbital, except the projectors are Lowdin-orthonormalized
+#       atomic orbitals. This orthonormalization ensures that the sum of DOS
+#       projected on all OrthoOrbitals is <= the total DOS.
+# Any number of weight functions may be specified; only the total density
+# of states is output if no weight functions are specified. Other flags
+# that control aspects of the density of states computation are:
+#    Etol <Etol>
+#       Resolution in energy within which eigenvalues are identified,
+#       and is used as the band width for Gamma-point only calculations.
+#       This flag affects all columns of output, and is 1e-6 by default.
+#    Esigma <Esigma>
+#       Optional gaussian broadening of spectra in Hartrees. Applied after
+#       the tetrahedron method, so it is safe to use a width smaller than
+#       the typical level spacing. This flag affects all columns of output,
+#       and is 0 by default. Warning: if finite but too small, output size
+#       might be dangerously large; if non-zero, recommend at least 1e-4.
+#    Occupied
+#       All subsequent columns are occupied density of states, that is
+#       they are weighted by the band fillings.
+#    Complete
+#       All subsequent columns are complete density of states, that is
+#       they do not depend on band fillings: this is the default mode.
+# This command adds DOS to dump-frequency End, but this may be altered
+# within a dump command of appropriate frequency (see command dump).
+
+# dump <freq> <var> <var> ...
+# <freq> is one of:
+#    Electronic Dump specified vars every (few) electronic step(s)
+#    End        Dump specified vars at the end of the calculation
+#    Fluid      Dump specified vars every (few) fluid step(s)
+#    Gummel     Dump specified vars every (few) fluid+electron minimize of the gummel loop
+#    Ionic      Dump specified vars every (few) ionic step(s)
+#    Lattice    Dump specified vars every (few) lattice minimization step(s)
+# and each <var*> is one of:
+#    All                       Dump most things (except those marked not in All)
+#    BandEigs                  Band Eigenvalues
+#    BoundCharge               Bound charge in the fluid
+#    CoreDensity               Total core electron density (from partial core corrections)
+#    Dfluid                    Electrostatic potential due to fluid alone
+#    Dipole                    Dipole moment of explicit charges (ionic and electronic)
+#    DOS                       Density of States (see density-of-states) [not in All]
+#    Dtot                      Total electrostatic potential
+#    Dvac                      Electrostatic potential due to explicit system alone
+#    Ecomponents               Components of the energy
+#    ElecDensity               Electronic densities (n or nup,ndn)
+#    ExcCompare                Energies for other exchange-correlation functionals (see elec-ex-corr-compare) [not in All]
+#    Excitations               Dumps dipole moments and transition strength (electric-dipole) of excitations
+#    Fillings                  Fillings
+#    FluidDebug                Fluid specific debug output if any  [not in All]
+#    FluidDensity              Fluid densities (NO,NH,nWater for explicit fluids, cavity function for PCMs)
+#    Forces                    Forces on the ions in the coordinate system selected by command forces-output-coords
+#    IonicDensity              Nuclear charge density (with gaussians)
+#    IonicPositions            Ionic positions in the same format (and coordinate system) as the input file
+#    KEdensity                 Kinetic energy density of the valence electrons
+#    Kpoints                   List of reduced k-points in calculation, and mapping to the unreduced k-point mesh
+#    Lattice                   Lattice vectors in the same format as the input file
+#    Momenta                   Momentum matrix elements in a binary file (indices outer to inner: state, cartesian direction, band1, band2)
+#    None                      Dump nothing
+#    optVext                   Optimized external potentials (see invertKohnSham) [not in All]
+#    OrbitalDep                Custom output from orbital-dependent functionals (eg. quasi-particle energies, discontinuity potential)
+#    QMC                       Blip'd orbitals and potential for CASINO
+#    RealSpaceWfns             Real-space wavefunctions (one column per file) [not in All]
+#    RhoAtom                   Atomic-orbital projected density matrices (only for species with +U enabled)
+#    SelfInteractionCorrection Calculates Perdew-Zunger self-interaction corrected Kohn-Sham eigenvalues
+#    SolvationRadii            Effective solvation radii based on fluid bound charge distribution
+#    State                     All variables needed to restart calculation: wavefunction and fluid state/fillings if any
+#    Stress                    Dumps dE/dR_ij where R_ij is the i'th component of the j'th lattice vector
+#    Symmetries                List of symmetry matrices (in covariant lattice coordinates)
+#    Vcavity                   Fluid cavitation potential on the electron density that determines the cavity
+#    VfluidTot                 Total contribution of fluid to the electron potential
+#    Vlocps                    Local part of pseudopotentials
+#    Vscloc                    Self-consistent potential
+#    XCanalysis                XC analysis: debug VW KE density, single-particle-ness and spin-polarzied Hartree potential
+# List of dumped variables from multiple instances will be accumulated for each <freq>.
+# Use command dump-interval to dump at regular intervals instead of every iteration.
+dump End State
+
+# dump-interval <freq> <interval>
+# Dump every <interval> iterations of type <freq>=Ionic|Electronic|Fluid|Gummel
+# Without this command, the behavior defaults to <interval>=1 for each <freq>.
+
+# dump-name <format>
+#   Control the filename pattern for dump output:
+#     <format> is an arbitrary format string that will be substituted according to:
+#        $VAR -> name of the variable being dumped (this must be present somewhere in the string)
+#        $STAMP -> time-stamp at the start of dump
+dump-name $STAMP.$VAR
+
+# eigen-shift <qnum> <band> <shift> [<fromHOMO>=yes]
+# When fillings are computed during electronic-scf, shifts KS eigenvalue of (qnum, band) by shift
+# Band index is calculated from HOMO, unless fromHOMO is set to no
+# 
+
+# elec-cutoff <Ecut> [<EcutRho>=0]
+# Electronic planewave cutoff in Hartree. Optionally specify charge density cutoff
+# <EcutRho> in hartrees. If unspecified or zero, EcutRho is taken to be 4*Ecut.
+elec-cutoff 20
+
+# elec-eigen-algo <algo>=CG|Davidson
+# Selects eigenvalue algorithm for band-structure calculations or inner loop of SCF.
+elec-eigen-algo Davidson
+
+# elec-ex-corr <functional>
+# Specify the exchange-correlation functional, where <functional> is one of:
+#    gga          Perdew-Burke-Ernzerhof GGA
+#    gga-PBE      Perdew-Burke-Ernzerhof GGA
+#    gga-PBEsol   Perdew-Burke-Ernzerhof GGA reparametrized for solids
+#    gga-PW91     Perdew-Wang GGA
+#    Hartree-Fock Full exact exchange with no correlation
+#    hyb-HSE06    HSE06 'wPBEh' hybrid with 1/4 screened exact exchange
+#    hyb-HSE12    Reparametrized screened exchange functional for accuracy (w=0.185 A^-1 and a=0.313)
+#    hyb-HSE12s   Reparametrized screened exchange functional for k-point convergence (w=0.408 A^-1 and a=0.425)
+#    hyb-PBE0     Hybrid PBE with 1/4 exact exchange
+#    lda          Perdew-Zunger LDA
+#    lda-PW       Perdew-Wang LDA
+#    lda-PW-prec  Perdew-Wang LDA with extended precision (used by PBE)
+#    lda-PZ       Perdew-Zunger LDA
+#    lda-Teter    Teter93 LSDA
+#    lda-VWN      Vosko-Wilk-Nusair LDA
+#    mgga-revTPSS revised Tao-Perdew-Staroverov-Scuseria meta GGA
+#    mgga-TPSS    Tao-Perdew-Staroverov-Scuseria meta GGA
+#    orb-GLLBsc   Orbital-dependent GLLB-sc potential (no total energy)
+#    pot-LB94     van Leeuwen-Baerends model potential (no total energy).
+# Note that lda is an alias for lda-pz, and gga for gga-pbe.
+# Additional functionals can be enabled by compiling with LibXC support.
+elec-ex-corr gga-PBE
+
+# elec-ex-corr-compare <functional>
+# Compute total energies for other functionals at the final state for comparison.
+# This command may be specified multiple times. It invokes 'dump End ExcCompare'
+# automatically, but the compute frequency can be controlled using dump explicitly.
+# The available options for each parameter are identical to elec-ex-corr
+
+# elec-fermi-fillings <mixInterval> <kT> [<alpha>=0.5]
+# Fermi-Dirac fillings at a temperature <kT> (in Hartrees).
+#   If <mixInterval> is zero, use the auxilliary hamiltonian method (recommended).
+#   Else, mix fermi functions every <mixInterval> iterations with mixing fraction <alpha>.
+
+# elec-initial-charge <QNet> | <QupNet> <QdnNet>
+# Initialize a system with <QNet> excess unpolarized electrons
+# or with <QupNet> and <QdnNet> excess electrons in each spin channel.
+# Both versions are valid irrespective of whether system is spin-polarized.
+
+# elec-initial-fillings read <filename> [<nBandsOld>]
+# Initial electronic fillings are read from <filename> instead of computed automatically (default)
+# 	<nBandsOld> specifies the number of bands in the file being read, if different from current nBands
+# 	extra new bands are filled with 0s, fillings of extra old bands are accumulated into other bands
+# 	default: 0 => fillings file has same number of bands as this run
+
+# elec-initial-Haux <filename>
+# Read the auxilliary hamiltonian for direct fillings (default: set to subspace hamiltonian)
+# 
+
+# elec-n-bands <n>
+# Manually specify the number of bands (Default: set nBands assuming insulator
+# or in the case of fillings, equal to total number of atomic orbitals.)
+
+# electronic-minimize <key1> <value1> <key2> <value2> ...
+# where possible keys and value types are:
+#    alphaTincreaseFactor step size increase factor when curvature is wrong in linmin
+#    alphaTmin            minimum test step size
+#    alphaTreduceFactor   step size reduction factor when energy increases in linmin
+#    alphaTstart          initial test step size (constant step-size factor for Relax linmin)
+#    dirUpdateScheme      FletcherReeves|HestenesStiefel|L-BFGS|PolakRibiere|SteepestDescent (search direction method)
+#    energyDiffThreshold  convergence threshold for energy difference between successive iterations
+#    fdTest               no|yes, whether to perform a finite difference test
+#    history              number of past states and gradients retained for L-BFGS
+#    knormThreshold       convergence threshold for gradient (preconditioned) norm
+#    linminMethod         Cubic|Quad|Relax (line minimization method)
+#    nAlphaAdjustMax      maximum step-size adjustments per linmin
+#    nDirResetDen         <int>  / reset search direction when linmin fails <nDirResetNum> \
+#    nDirResetNum         <int>  \     out of <nDirResetDen> successive iterations         /
+#    nEnergyDiff          number of iteration pairs that must satisfy energyDiffThreshold
+#    nIterations          maximum iterations (single point calculation if 0)
+#    updateTestStepSize   no|yes, whether test step size is updated
+# Any number of these key-value pairs may be specified in any order.
+electronic-minimize  \
+	dirUpdateScheme      PolakRibiere \
+	linminMethod         Quad \
+	nIterations          100 \
+	history              3 \
+	knormThreshold       0 \
+	energyDiffThreshold  1e-08 \
+	nEnergyDiff          2 \
+	nDirResetNum         2 \
+	nDirResetDen         5 \
+	alphaTstart          1 \
+	alphaTmin            1e-10 \
+	updateTestStepSize   yes \
+	alphaTreduceFactor   0.1 \
+	alphaTincreaseFactor 3 \
+	nAlphaAdjustMax      3 \
+	fdTest               no
+
+# electronic-scf <key1> <value1> <key2> <value2> ...
+# Enables self-consistent residual minimization.  If provided, keys adjust SCF parameters. Possible keys and value types are:
+#    eigDiffThreshold           convergence threshold for the RMS difference in KS eigenvalues between successive iterations
+#    energyDiffThreshold        convergence threshold for energy difference between successive iterations
+#    history                    number of past residuals and vectors are kept cached and used in DIIS
+#    mixedVariable              whether density or potential will be mixed at each step
+#    mixFraction                maximum fraction of new variable mixed in at each step (default 0.5)
+#    nEigSteps                  number of eigenvalue steps per iteration (if 0, limited by electronic-minimize nIterations)
+#    nIterations                maximum iterations (single point calculation if 0)
+#    qKerker                    wavevector controlling Kerker preconditioning (default: 0.8 bohr^-1)
+#    qMetric                    wavevector controlling the DIIS metric (default: 0.8 bohr^-1)
+#    residualThreshold          convergence threshold for the residual in the mixed variable (density or potential)
+#    single-particle-constraint enforces the single particle constraint on the exchange
+#    verbose                    whether the inner eigenvalue solver will print or not
+# Any number of these key-value pairs may be specified in any order.
+
+# exchange-regularization <method>=AuxiliaryFunction|None|ProbeChargeEwald|SphericalTruncated|WignerSeitzTruncated
+# Regularization / singularity correction method for exact exchange.
+# The allowed methods and defaults depend on the setting of <geometry>
+# in command coulomb-interaction
+#    None
+#       No singularity correction: default and only option for non-periodic
+#       systems with no G=0 singularity (<geometry> = Spherical / Isolated).
+#       This is allowed for fully or partially periodic systems, but is not
+#       recommended due to extremely poor convergence with number of k-points.
+#    AuxiliaryFunction
+#       G=0 modification based on numerical integrals of an auxiliary
+#       function, as described in P. Carrier et al, PRB 75, 205126 (2007).
+#       Allowed for 3D/2D/1D periodic systems.
+#    ProbeChargeEwald
+#       G=0 modification based on the Ewald sum of a single point charge
+#       per k-point sampled supercell. Valid for 3D/2D/1D periodic systems.
+#    SphericalTruncated
+#       Truncate exchange kernel on a sphere whose volume equals the k-point
+#       sampled supercell, as in J. Spencer et al, PRB 77, 193110 (2008).
+#       Allowed for any (partially) periodic <geometry>, but is recommended
+#       only when the k-point sampled supercell is roughly isotropic.
+#    WignerSeitzTruncated
+#       Truncate exchange kernel on the Wigner-Seitz cell of the k-point
+#       sampled supercell, as in R. Sundararaman et al (under preparation).
+#       Default for any (partially) periodic <geometry>.
+exchange-regularization WignerSeitzTruncated
+
+# fftbox <S0> <S1> <S2>
+# Specify a manual FFT box
+
+# fix-electron-density <filenamePattern>
+# Perform band structure calculations at fixed electron density
+# (or spin density) read from the specified <filenamePattern>, which
+# must contain $VAR which will be replaced by the appropriate variable
+# names accounting for spin-polarization (same as used for dump).
+# Meta-GGA calculations will also require the corresponding kinetic density.
+
+# fix-electron-potential <filenamePattern>
+# Perform band structure calculations at fixed electron potential
+# (or spin potential) read from the specified <filenamePattern>, which
+# must contain $VAR which will be replaced by the appropriate variable
+# names accounting for spin-polarization (same as used for dump).
+# Meta-GGA calculations will also require the corresponding kinetic potential.
+
+# fix-occupied [<fThreshold>=0]
+# Fix orbitals with fillings larger than <fThreshold> in band-structure calculations
+# The occupied orbitals must be read in using the wavefunction / initial-state commands.
+# 
+
+# fluid [<type>=None] [<Temperature>=298K] [<Pressure>=1.01325bar]
+# Enable joint density functional theory
+# 	<type> = ClassicalDFT|LinearPCM|None|NonlinearPCM|NonlocalPCM
+# 	<Temperature> in Kelvin and <Pressure> in bars.
+fluid None
+
+# fluid-anion <name> <concentration> [<functional>=MeanFieldLJ] [<key1> <value1>] ...
+# Add anion component Cl- to fluid.
+# The concentration must be specified explicitly in mol/liter.
+# For classical DFT fluids, the excess functional may be one of BondedVoids|FittedCorrelations|MeanFieldLJ|ScalarEOS
+# Optional component properties may be overridden using an arbitrary number of <key> <value> pairs.
+# See command fluid-solvent for a description of adjustable properties.
+
+# fluid-cation <name> <concentration> [<functional>=MeanFieldLJ] [<key1> <value1>] ...
+# Add cation component Na+ to fluid.
+# The concentration must be specified explicitly in mol/liter.
+# For classical DFT fluids, the excess functional may be one of BondedVoids|FittedCorrelations|MeanFieldLJ|ScalarEOS
+# Optional component properties may be overridden using an arbitrary number of <key> <value> pairs.
+# See command fluid-solvent for a description of adjustable properties.
+
+# fluid-dielectric-constant [<epsBulkOverride>=0] [<epsInfOverride>=0]
+# Override bulk static or high frequency dieelctric constant of fluid (if non-zero values specified)
+
+# fluid-ex-corr <kinetic> [<exchange-correlation>]
+# Kinetic energy functional for fluid convolution coupling where <kinetic> is one of:
+#    gga-PW91k Perdew-Wang GGA kinetic energy parameterized by Lembarki and Chermette
+#    gga-vW    von Weisacker correction to LDA kinetic energy
+#    lda-TF    Thomas-Fermi LDA kinetic energy.
+# The available options for <exchange-correlation> are identical to elec-ex-corr
+# and defaults to the functional set by elec-ex-corr.
+fluid-ex-corr lda-TF gga-PBE
+
+# fluid-gummel-loop [<maxIterations>=10] [<Atol>=1e-5]
+# Settings for the fluid <--> electron self-consistency loop:
+# 	<maxIterations>: Max number of electron and fluid minimization pairs
+# 	<Atol>: Free energy convergence criterion for this outer loop
+fluid-gummel-loop 10 1.000000e-05
+
+# fluid-initial-state <filename>
+# Read initial state of a fluid (compatible with *.fluidState from dump End State)
+
+# fluid-minimize <key1> <value1> <key2> <value2> ...
+# where possible keys and value types are:
+#    alphaTincreaseFactor step size increase factor when curvature is wrong in linmin
+#    alphaTmin            minimum test step size
+#    alphaTreduceFactor   step size reduction factor when energy increases in linmin
+#    alphaTstart          initial test step size (constant step-size factor for Relax linmin)
+#    dirUpdateScheme      FletcherReeves|HestenesStiefel|L-BFGS|PolakRibiere|SteepestDescent (search direction method)
+#    energyDiffThreshold  convergence threshold for energy difference between successive iterations
+#    fdTest               no|yes, whether to perform a finite difference test
+#    history              number of past states and gradients retained for L-BFGS
+#    knormThreshold       convergence threshold for gradient (preconditioned) norm
+#    linminMethod         Cubic|Quad|Relax (line minimization method)
+#    nAlphaAdjustMax      maximum step-size adjustments per linmin
+#    nDirResetDen         <int>  / reset search direction when linmin fails <nDirResetNum> \
+#    nDirResetNum         <int>  \     out of <nDirResetDen> successive iterations         /
+#    nEnergyDiff          number of iteration pairs that must satisfy energyDiffThreshold
+#    nIterations          maximum iterations (single point calculation if 0)
+#    updateTestStepSize   no|yes, whether test step size is updated
+# Any number of these key-value pairs may be specified in any order.
+fluid-minimize  \
+	dirUpdateScheme      PolakRibiere \
+	linminMethod         Quad \
+	nIterations          100 \
+	history              3 \
+	knormThreshold       0 \
+	energyDiffThreshold  0 \
+	nEnergyDiff          2 \
+	nDirResetNum         2 \
+	nDirResetDen         5 \
+	alphaTstart          1 \
+	alphaTmin            1e-10 \
+	updateTestStepSize   yes \
+	alphaTreduceFactor   0.1 \
+	alphaTincreaseFactor 3 \
+	nAlphaAdjustMax      3 \
+	fdTest               no
+
+# fluid-site-params  <solvent> <siteName> <key1> <value1> <key2> <value2> ...
+# Set parameters of <siteName> site for solvent component <solvent>=CCl4|CH3CN|CHCl3|Cl-|CustomAnion|CustomCation|H2O|Na+.
+# Changes default parameters of existing site. 
+# Possible keys and value types are:
+#    aElec         cuspless-exponential width of electron charge distribution
+#    alpha         isotropic polarizability
+#    aPol          cuspless-exponential width of polarizability
+#    elecFilename  filename to read in additional radial realspace electron charge distribution
+#    elecFilenameG filename to read in additional radial Gspace electron charge distribution
+#    sigmaNuc      gaussian width of the nuclear charge (positive)
+#    Zelec         magnitude of electron charge (positive)
+#    Znuc          magnitude of the nuclear charge (positive)
+# Any number of these key-value pairs may be specified in any order.
+fluid-site-params 
+
+# fluid-solvent [<name>=H2O] [<concentration>=bulk] [<functional>=ScalarEOS] [<key1> <value1>] ...
+# Add solvent component CarbonDisulfide|CCl4|CH2Cl2|CH3CN|CHCl3|Chlorobenzene|DMC|DMF|DMSO|EC|Ethanol|EthylEther|H2O|Isobutanol|Methanol|PC|THF to fluid.
+# The concentration may be specified explicitly in mol/liter or set to 'bulk' to use bulk fluid value.
+# For classical DFT fluids, the excess functional may be one of BondedVoids|FittedCorrelations|MeanFieldLJ|ScalarEOS
+# Optional component properties may be overridden using an arbitrary number of <key> <value> pairs.
+# Possible keys and value types are:
+#    epsBulk        bulk dielectric constant
+#    epsInf         optical-frequency dielectric constant
+#    epsLJ          Lennard-Jones well depth for Mean-Field LJ excess functional
+#    Nnorm          unit cell molecule count constraint
+#    pMol           dipole moment of each molecule in e-bohr
+#    Pvap           vapor pressure in Eh/bohr^3
+#    quad_nAlpha    number of alpha samples for Euler quadrature
+#    quad_nBeta     number of beta samples for Euler quadrature
+#    quad_nGamma    number of gamma samples for Euler quadrature
+#    representation ideal gas representation = MuEps|Pomega|PsiAlpha
+#    Res            electrostatic radius of solvent (derived from nonlocal response) in bohrs
+#    Rvdw           effective van der Waals radius of the fluid (derived from equation of state) in bohrs
+#    s2quadType     orientation quadrature type = 10design60|11design70|12design84|13design94|14design108|15design120|16design144|17design156|18design180|19design204|20design216|21design240|7design24|8design36|9design48|Euler|Icosahedron|Octahedron|Tetrahedron
+#    sigmaBulk      bulk surface tension in Eh/bohr^2
+#    translation    translation operator type = ConstantSpline|Fourier|LinearSpline
+# Any number of these key-value pairs may be specified in any order.
+fluid-solvent H2O 55.338 ScalarEOS \
+	epsBulk 78.4 \
+	pMol 0.92466 \
+	epsInf 1.77 \
+	Pvap 1.06736e-10 \
+	sigmaBulk 4.62e-05 \
+	Rvdw 2.61727 \
+	Res 1.42
+
+# fluid-vdwScale <scale=0.75>
+# Scale van der Waals interactions between fluid and explicit system by a constant factor <scale>.
+#    Default is scale=0.75 (scale factor for PBE).
+#    Set to 0 to use prefactor corresponding to fluid exchange-correlation.
+
+# forces-output-coords <coords>=Cartesian|Contravariant|Lattice|Positions
+# Coordinate system to use for force output in logPrintf-file as well as dump:
+# 	Positions: Use the same coordinate system as ionic position input (selected by coords-type) [default].
+# 	Lattice:   Use (covariant) lattice coordinates
+# 	Cartesian: Use cartesian coordinates
+# 	Contravariant: Use contravariant lattice coordinates (covariant multiplied by inv(RT.R))
+forces-output-coords Positions
+
+# initial-magnetic-moments <species> <M1> <M2> ... <Mn> [<species2> ...]
+# Specify initial magnetic moments, defined as the difference between
+# up and down electron counts, on each atom of one or more species.
+# For each species, the initial magnetic moments are applied to the
+# atoms in the order of ion commands for that species.
+# This may be used to construct a spin-polarized reference density
+# for LCAO initialization of the Kohn-Sham orbitals.
+
+# initial-oxidation-state <species> <oxState> [<species2> ...]
+# Specify initial oxidation state assumed for each species in LCAO.
+# This may significantly improve LCAO convergence in some cases.
+
+# initial-state <filename-pattern>
+# Initialize state from a filename pattern which contains a $VAR,
+# equivalent to invoking the following commands:
+#    wavefunction          read  <filename-pattern>/$VAR/wfns
+#    elec-initial-fillings read  <filename-pattern>/$VAR/fillings
+#    elec-initial-Haux           <filename-pattern>/$VAR/Haux
+#    fluid-initial-state         <filename-pattern>/$VAR/fluidState
+# (where A/x/y is sed for 'find x in A and replace it with y'.)
+# This command will invoke the read only for those state variables for which
+# the corresponding files exist, leaving the rest with default initialization.
+# When using SCF, this will also read scfHistory and eigenvalues if available.
+
+# inverseKohnSham-minimize <key1> <value1> <key2> <value2> ...
+# where possible keys and value types are:
+#    alphaTincreaseFactor step size increase factor when curvature is wrong in linmin
+#    alphaTmin            minimum test step size
+#    alphaTreduceFactor   step size reduction factor when energy increases in linmin
+#    alphaTstart          initial test step size (constant step-size factor for Relax linmin)
+#    dirUpdateScheme      FletcherReeves|HestenesStiefel|L-BFGS|PolakRibiere|SteepestDescent (search direction method)
+#    energyDiffThreshold  convergence threshold for energy difference between successive iterations
+#    fdTest               no|yes, whether to perform a finite difference test
+#    history              number of past states and gradients retained for L-BFGS
+#    knormThreshold       convergence threshold for gradient (preconditioned) norm
+#    linminMethod         Cubic|Quad|Relax (line minimization method)
+#    nAlphaAdjustMax      maximum step-size adjustments per linmin
+#    nDirResetDen         <int>  / reset search direction when linmin fails <nDirResetNum> \
+#    nDirResetNum         <int>  \     out of <nDirResetDen> successive iterations         /
+#    nEnergyDiff          number of iteration pairs that must satisfy energyDiffThreshold
+#    nIterations          maximum iterations (single point calculation if 0)
+#    updateTestStepSize   no|yes, whether test step size is updated
+# Any number of these key-value pairs may be specified in any order.
+inverseKohnSham-minimize  \
+	dirUpdateScheme      PolakRibiere \
+	linminMethod         Quad \
+	nIterations          100 \
+	history              3 \
+	knormThreshold       0 \
+	energyDiffThreshold  1e-08 \
+	nEnergyDiff          2 \
+	nDirResetNum         2 \
+	nDirResetDen         5 \
+	alphaTstart          1 \
+	alphaTmin            1e-10 \
+	updateTestStepSize   yes \
+	alphaTreduceFactor   0.1 \
+	alphaTincreaseFactor 3 \
+	nAlphaAdjustMax      3 \
+	fdTest               no
+
+# invertKohnSham [<nonlocal>=yes] [<sigma>=0] [<chiGuessFilename>]
+# Solve inverse Kohn-Sham problem: for a given electron density
+# specified using fix-electron-density, find the corresponding
+# external potential (in addition to the pseudopotentials and
+# Hartree+XC potential evaluated at the given electron density).
+# Vexternal may be used to specify an initial guess.
+# Control outer optimization using inverseKohnSham-minimize, and
+# inner minimization using electronic-minimize (as usual). The
+# result is dumped with variable name "optVext" or "optVextUp"
+# and "optVextDn" depending on specified spin type.
+# Option <nonlocal>=no|yes controls whether to
+# include non-local parts of the pseudopotential (default yes).
+# Option <sigma> specifies a bandwidth cutoff in the external
+# potential of the form exp(-(1/2) sigma^2 G^2) (default: 0).
+# Option <chiGuessFilename> specifies a preconditioner based on
+# the response function of a similar electronic system. The pattern
+# should contain $VAR which will be used to read wavefunctions,
+# eigenvalues and fillings (these should include empty states).
+
+# ion <species-id> <x0> <x1> <x2> <moveScale> [<constraint type>=Linear|None|Planar <d0> <d1> <d2>]
+# Add an atom of species <species-id> at coordinates (<x0>,<x1>,<x2>).
+# <moveScale> preconditions the motion of this ion (set 0 to hold fixed)
+# In addition, the ion may be constrained to a line or a plane with line
+# direction or plane normal equal to (<d0>,<d1>,<d2>) in the coordinate
+# system selected by command coords-type. Note that the constraints must
+# be consistent with respect to symmetries (if enabled).
+
+# ion-species <id> <Z> <mass> <pot-file> <pulayfile>
+# 	 | <id> <Z> <mass> <cpi-file> <pulayfile> fhi [<unused> <local-l>]
+# 	 | [<path>/]<id>.fhi [<pulayfile>]
+# 	 | [<path>/]<id>.uspp [<startBytes>=4] [<endBytes>=4] [<pulayfile>]
+# Define ion species identified by <id> with valence charge <Z> and mass <mass>.
+#   <pulayfile>: filename for pulay info ("none" to disable)
+#   <local-l> = c|d|f|p|s, select local channel (for fhi psp's)
+# In the .fhi/.uspp options (recommended), all the info is obtained from the file,
+# including the <id>, which is obtained from the filename (minus path/extension).
+# If <pulayfile> is not specified and [<path>/]<id>.pulay exists, pulay data will
+# be read from that file; set <pulayfile> to "none" to ignore such files.
+# The USPP format is a fortran sequential binary file with start and end markers
+# with fortran-compiler dependent lengths. The defaults are valid for gfortran
+
+# ion-width Ecut | fftbox | <width>
+# Manually specify width of gaussian representations of nuclear charge in bohr
+# or set automatically based on either energy cut-off (Ecut) or grid spacing (fftbox).
+# The widened charges are only used in the interaction with fluids and dumped potentials,
+# and does not affect the energy of the electronic system. Default is Ecut-based selection
+# for LinearPCM/NonlinearPCM and 0 (no widening) for all other fluid types.
+ion-width 0
+
+# ionic-minimize <key1> <value1> <key2> <value2> ...
+# where possible keys and value types are:
+#    alphaTincreaseFactor step size increase factor when curvature is wrong in linmin
+#    alphaTmin            minimum test step size
+#    alphaTreduceFactor   step size reduction factor when energy increases in linmin
+#    alphaTstart          initial test step size (constant step-size factor for Relax linmin)
+#    dirUpdateScheme      FletcherReeves|HestenesStiefel|L-BFGS|PolakRibiere|SteepestDescent (search direction method)
+#    energyDiffThreshold  convergence threshold for energy difference between successive iterations
+#    fdTest               no|yes, whether to perform a finite difference test
+#    history              number of past states and gradients retained for L-BFGS
+#    knormThreshold       convergence threshold for gradient (preconditioned) norm
+#    linminMethod         Cubic|Quad|Relax (line minimization method)
+#    nAlphaAdjustMax      maximum step-size adjustments per linmin
+#    nDirResetDen         <int>  / reset search direction when linmin fails <nDirResetNum> \
+#    nDirResetNum         <int>  \     out of <nDirResetDen> successive iterations         /
+#    nEnergyDiff          number of iteration pairs that must satisfy energyDiffThreshold
+#    nIterations          maximum iterations (single point calculation if 0)
+#    updateTestStepSize   no|yes, whether test step size is updated
+# Any number of these key-value pairs may be specified in any order.
+ionic-minimize  \
+	dirUpdateScheme      PolakRibiere \
+	linminMethod         Quad \
+	nIterations          0 \
+	history              3 \
+	knormThreshold       0.0001 \
+	energyDiffThreshold  1e-06 \
+	nEnergyDiff          2 \
+	nDirResetNum         2 \
+	nDirResetDen         5 \
+	alphaTstart          1 \
+	alphaTmin            1e-10 \
+	updateTestStepSize   yes \
+	alphaTreduceFactor   0.1 \
+	alphaTincreaseFactor 3 \
+	nAlphaAdjustMax      3 \
+	fdTest               no
+
+# kpoint <k0> <k1> <k2> <weight>
+# Specify kpoint at lattice coordinates (<k0>, <k1>, <k2>) with weight <weight>
+# A single k-point at 0,0,0 (Gamma point) with weight 1 is used if unspecified.
+kpoint   0.000000000000   0.000000000000   0.000000000000  1.00000000000000
+
+# kpoint-folding [<n0>=1] [<n1>=1] [<n2>=1]
+# Fold k-points in direction i by factor <ni> (for i=0,1,2)
+kpoint-folding 1 1 1 
+
+# latt-move-scale <s0> <s1> <s2>
+# Preconditioning factor for each lattice vector (must be commensurate with symmetries)
+latt-move-scale 1 1 1
+
+# latt-scale <s0> <s1> <s2>
+# Scale lattice vector i by factor <si>
+latt-scale 1 1 1 
+
+# lattice  [<modification>] <lattice> <parameters...>
+#  | \
+# 	<R00> <R01> <R02> \
+# 	<R10> <R11> <R12> \
+# 	<R20> <R21> <R22>
+# Specify lattice by name and parameters, or manually lattice vectors (in columns).
+# The options for the [<modification>] <lattice> <parameters...> scheme are:
+#    Triclinic <a> <b> <c> <alpha> <beta> <gamma>
+#    [Base-Centered] Monoclinic <a> <b> <c> <beta>
+#    [Base|Body|Face-Centered] Orthorhombic <a> <b> <c>
+#    [Body-Centered] Tetragonal <a> <c>
+#    Rhombohedral <a> <alpha>
+#    Hexagonal <a> <c>
+#    [Body|Face-Centered] Cubic <a>
+
+# lattice-minimize <key1> <value1> <key2> <value2> ...
+# where possible keys and value types are:
+#    alphaTincreaseFactor step size increase factor when curvature is wrong in linmin
+#    alphaTmin            minimum test step size
+#    alphaTreduceFactor   step size reduction factor when energy increases in linmin
+#    alphaTstart          initial test step size (constant step-size factor for Relax linmin)
+#    dirUpdateScheme      FletcherReeves|HestenesStiefel|L-BFGS|PolakRibiere|SteepestDescent (search direction method)
+#    energyDiffThreshold  convergence threshold for energy difference between successive iterations
+#    fdTest               no|yes, whether to perform a finite difference test
+#    history              number of past states and gradients retained for L-BFGS
+#    knormThreshold       convergence threshold for gradient (preconditioned) norm
+#    linminMethod         Cubic|Quad|Relax (line minimization method)
+#    nAlphaAdjustMax      maximum step-size adjustments per linmin
+#    nDirResetDen         <int>  / reset search direction when linmin fails <nDirResetNum> \
+#    nDirResetNum         <int>  \     out of <nDirResetDen> successive iterations         /
+#    nEnergyDiff          number of iteration pairs that must satisfy energyDiffThreshold
+#    nIterations          maximum iterations (single point calculation if 0)
+#    updateTestStepSize   no|yes, whether test step size is updated
+# Any number of these key-value pairs may be specified in any order.
+lattice-minimize  \
+	dirUpdateScheme      PolakRibiere \
+	linminMethod         Quad \
+	nIterations          0 \
+	history              3 \
+	knormThreshold       0 \
+	energyDiffThreshold  1e-06 \
+	nEnergyDiff          2 \
+	nDirResetNum         2 \
+	nDirResetDen         5 \
+	alphaTstart          1 \
+	alphaTmin            1e-10 \
+	updateTestStepSize   yes \
+	alphaTreduceFactor   0.1 \
+	alphaTincreaseFactor 3 \
+	nAlphaAdjustMax      3 \
+	fdTest               no
+
+# lcao-params [<nIter>=-1] [<Ediff>=1e-6] [<kT>=1e-3]
+# Control LCAO wavefunction initialization:
+#  <nIter>: maximum subspace iterations in LCAO (negative => auto-select)
+#  <Ediff>: energy-difference convergence threshold for subspace iteration
+#  <kT>: Fermi temperature for the subspace iteration for T=0 calculations.
+#     If present, the Fermi temperature from elec-fermi-fillings overrides this.
+# 
+lcao-params -1 1e-06 0.001
+
+# pcm-nonlinear-debug <linearDielectric>=no|yes <linearScreening>=no|yes
+# Emulate linear response of the dielectric or screening within NonlinearPCM (for debugging purposes only)
+
+# pcm-params <key1> <value1> <key2> <value2> ...
+# Adjust PCM solvent parameters. Possible keys and value types are:
+#    cavityTension effective surface tension (including dispersion etc.) of the cavity (hartree per bohr^2)
+#    lMax          angular momentum truncation in nonlocal PCM
+#    nc            critical density for the PCM cavity shape function
+#    sigma         smoothing factor for the PCM cavity shape function
+#    useTau        threshold on KE density instead of density
+# Any number of these key-value pairs may be specified in any order.
+
+# pcm-variant [<variant>=GLSSA13]
+# Select LinearPCM or NonlinearPCM <variant> amongst:
+#    GLSSA13 PCM with empirical cavity tension [D. Gunceler, K. Letchworth-Weaver, R. Sundararaman, K.A. Schwarz and T.A. Arias, arXiv:1301.6189]
+#    LA12    PCM with no cavitation/dispersion contributions [K. Letchworth-Weaver and T.A. Arias, Phys. Rev. B 86, 075140 (2012)]
+#    PRA05   PCM with no cavitation/dispersion contributions [S.A. Petrosyan SA, A.A. Rigos and T.A. Arias, J Phys Chem B. 109, 15436 (2005)]
+#    SG14    Isodensity PCM with weighted-cavity tension [EXPERIMENTAL]
+#    SG14tau Isokinetic PCM with weighted-cavity tension [EXPERIMENTAL]
+#    SGA13   PCM with weighted-density cavitation and dispersion [R. Sundararaman, D. Gunceler and T.A. Arias, (under preparation)]
+pcm-variant GLSSA13
+
+# polarizability <eigenBasis>=External|NonInteracting|Total [<Ecut>=0] [<nEigs>=0]
+# Output polarizability matrix in specified eigeneigenBasis
+
+# polarizability-kdiff <dk0> <dk1> <dk2> [<dkFilenamePattern>]
+# Select k-point difference (in reciprocal lattice coords) for polarizability output.
+# <dkFilenamePattern> may be specified to read offset band structure calcualations when <dk>
+# does not belong to the k-point mesh. This string should be a filename pattern containing
+# $VAR (to be replaced by eigenvals and wfns) and $q (to be replaced by state index)
+
+# reorthogonalize-orbitals [<interval=20> [<threshold>=1.5]
+# Every <interval> electronic steps, re-orthogonalize analytically-continued
+# orbitals if the condition number of their overlap matrix crosses <threshold>.
+# Set <interval> = 0 to disable this check.
+reorthogonalize-orbitals 20 1.5
+
+# rhoExternal <filename>
+# Include an external charge density [electrons/bohr^3] (real space binary)
+# which interacts electrostatically with the electrons, nuclei and fluid.
+
+# spin-restricted yes|no
+# Select whether to perform restricted spin-polarized calculations (default no).
+# Note that computational optimizations are minimal in current restricted implementation.
+# The format of wavefunction files depends on the spin, but is unaffected by this flag.
+
+# spintype <type>=no-spin|z-spin
+# Select spin-polarization type
+spintype no-spin
+
+# subspace-rotation-factor <factor>
+# preconditioning factor for subspace rotations
+subspace-rotation-factor 30
+
+# symmetries <symm>=automatic|manual|none <moveAtoms>=no|yes
+# 	none: symmetries are off
+# 	automatic: automatic calculation of symmetries (default)
+# 	manual: symmetries specified using symmetry-matrix command
+# Check if symmetries could be increased by translating all the atoms
+# and quit after suggesting the translated positions if <moveAtoms>=yes.
+symmetries automatic no
+
+# symmetry-matrix <s00> <s01> <s02> <s10> <s11> <s12> <s20> <s21> <s22>
+# Specify symmetry operator matrices explicitly.
+# Requires symmetries command to be called with manual argument
+
+# target-mu <mu> [<Cinitial>=1.0] [<dnMix>=0.7]
+# Fixed chemical potential <mu> (instead of fixed charge)
+# 	Cinitial: Initial capacitance, affects only first few mixing steps
+# 	dnMix: Scale the ideal step in n by this factor
+
+# tau-core <species-id> [<rCut>=0] [<plot>=yes|no]
+# Control generation of kinetic energy core correction for species <id>.
+# The core KE density is set to the Thomas-Fermi + von-Weisacker functional
+# of the core electron density (if any), and is pseudized inside within <rCut>
+# If <rCut>=0, it is chosen to be 1.5 times the location of the first radial
+# maximum in the TF+VW KE density. Optionally, if <plot>=yes, the resulting
+# core KE density (and electron density) are output to a gnuplot-friendly file.
+
+# van-der-waals [<scaleOverride>=0]
+# Pair-potential corrections for the long range Van der Waals interaction.
+# Implementation follows "S. Grimme, J. Comput. Chem. 27: 1787–1799 (2006)"
+# Exchange-Correlation functionals supported with van-der-waals are gga-PBE, hyb-gga-xc-b3lyp and mgga-TPSS.
+# Manually specify <scaleOverride> to use with other functionals
+
+# Vexternal <filename> | <filenameUp> <filenameDn>
+# Include an external potential (in hartrees) for the electrons
+# (real space binary). Specify two files if V is spin-polarized.
+
+# vibrations <key1> <args1> ...
+# Calculate vibrational modes of the system using a finite difference method.
+# Note that this command should typically be issued in a run with converged ionic
+# positions; ionic (and lattice) minimization are bypassed by the vibrations module.
+# Any number of the following subcommands and their arguments may follow:
+#   dr <dr>: perturbation amplitude in bohrs for force matrix calculation (default: 0.01).
+#   centralDiff yes|no: use a central difference formula for the second derivative
+#      to achieve higher accuracy at twice the cost (default: no)
+#   useConstraints yes|no: restrict modes of motion as specified by move flags
+#      and constraints in the ion command (default: no)
+#   traslationSym yes|no: whether to assume overall translation symmetry (default yes).
+#      Can be turned off to get vibrational levels in an external potential.
+#   rotationSym yes|no: project out rotational modes (default no). Improves reliability for
+#      molecular calculations. Valid only for geometries with an unambiguous center of mass.
+#   omegaMin <omegaMin>: frequency cutoff (in Eh) for free energy calculation (default: 2e-4)
+#   T <T>: temperature (in Kelvin) for free energy calculation (default: 298)
+#   omegaResolution <omegaResolution>: resolution for detecting and reporting degeneracies
+#      in modes (default: 1e-4). Does not affect free energies and all modes are still printed.
+
+# wavefunction lcao
+#            | random
+#            | read <filename> [<nBandsOld>] [<EcutOld>]
+#            | read-rs <filename-pattern> [<nBandsOld>] [<NxOld>] [<NyOld>] [<NzOld>]
+# Wavefunction initialization: use atomic orbitals (default), randomize or read from files:
+#   read expects <filename> to point to a single file with fourier-space G-sphere wavefunctions.
+#   read-rs expects <filename> to be a printf format with 2 %%d's, the first for state index and
+#      the second for band. Each 'column' will be loaded from a separate file accordingly.
+#   <nBandsOld> can be used to specify a wavefunction which has different bands
+#      extra bands will be discarded, unspecified bands will be randomized and orthogonalized
+#      Reminder: nBandsOlds for fillings file is specified separately in elec-initial-fillings
+#      default: 0 => old and current nBands must match exactly.
+#   <EcutOld> can be used to specify a wavefunction with different planewave cutoff
+#      the wavefunction will be appropriately up/down-sampled in Foruier space
+#      default: 0.0 => old and current Ecut must match exactly
+#   <N*old> specifies fftbox size of the input data when reading real-space wavefunctions
+#      the wavefunction will be appropriately up/down-sampled in Fourier space
+#      default: 0 => old and current fftbox must match exactly
+
+# wavefunction-drag yes|no
+# Drag wavefunctions when ions are moved using atomic orbital projections (yes by default).
+
+# +------------------------------------------------------------------------+
+# |                       JDFTx input file format                          |
+# +------------------------------------------------------------------------+
+# |  * The input file may contain the above commands in any order.         |
+# |  * Each command is a single line, but lines can be continued using '\' |
+# |  * Any text following '#' on an input line is treated as a comment.    |
+# |  * 'include <file>' can be used to include commands from <file>        |
+# |  * Each instance of ${xxx} is replaced by environment variable 'xxx'   |
+# |       (Variable substitution occurs before command/include processing) |
+# +------------------------------------------------------------------------+
+
