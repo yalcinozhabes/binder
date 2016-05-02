@@ -1,7 +1,0 @@
-Type: IPython Notebook Extension
-Name: Theme Toggler Button
-Description: This extension adds a button to toggle between two themes
-Link: https://github.com/sjpfenninger/ipython-extensions
-Icon: icon.png
-Main: main.js
-Compatibility: 3.x
