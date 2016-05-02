@@ -6,7 +6,7 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from .jdftx_constants import *
+from jdftx_constants import *
 
 try:
     defaulttext = subprocess.check_output(['jdftx', '-t'], universal_newlines=True)

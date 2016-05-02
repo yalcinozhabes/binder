@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import jdftx_lattice as jdlat
 import jdftx_InputParser as jdparser
-from .jdftx_constants import *
+from jdftx_constants import *
 pseudopot_home = os.environ['PSEUDOPOT_HOME']
 
 
